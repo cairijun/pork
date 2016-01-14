@@ -6,6 +6,23 @@ set(CMAKE_CXX_STANDARD 11)
 include(utils.cmake)
 
 
+# Zookeeper
+find_library(ZooKeeper_LIB zookeeper_mt)
+find_path(ZooKeeper_INCLUDE_DIR NAMES zookeeper.h zookeeper/zookeeper.h)
+if(ZooKeeper_LIB STREQUAL "ZooKeeper_LIB-NOTFOUND")
+    message(SEND_ERROR "Failed to find ZooKeeper library!")
+else()
+    message(STATUS "Found ZooKeeper library: ${ZooKeeper_LIB}")
+endif()
+if(ZooKeeper_INCLUDE_DIR STREQUAL "ZooKeeper_INCLUDE_DIR-NOTFOUND")
+    message(SEND_ERROR "Failed to find ZooKeeper header files")
+else()
+    message(STATUS "Found ZooKeeper header files directory: ${ZooKeeper_INCLUDE_DIR}")
+endif()
+
+include_directories(${ZooKeeper_INCLUDE_DIR})
+
+
 set(THRIFT_LIB ${CMAKE_PROJECT_NAME}-thrift)
 file(GLOB THRIFT_LIB_SRCS src/thrift/*.thrift)
 
@@ -19,11 +36,13 @@ add_thrift_library(${THRIFT_LIB} ${THRIFT_LIB_SRCS})
 
 add_library(${WORKER_LIB} SHARED ${WORKER_LIB_SRCS})
 target_link_libraries(${WORKER_LIB}
-    ${THRIFT_LIB})
+    ${THRIFT_LIB}
+    ${ZooKeeper_LIB})
 
 add_executable(${BROKER_EXE} ${BROKER_EXE_SRCS})
 target_link_libraries(${BROKER_EXE}
-    ${THRIFT_LIB})
+    ${THRIFT_LIB}
+    ${ZooKeeper_LIB})
 
 install(TARGETS ${WORKER_LIB} ${BROKER_EXE}
     RUNTIME DESTINATION bin
