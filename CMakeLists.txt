@@ -20,7 +20,16 @@ else()
     message(STATUS "Found ZooKeeper header files directory: ${ZooKeeper_INCLUDE_DIR}")
 endif()
 
-include_directories(${ZooKeeper_INCLUDE_DIR})
+# Boost
+set(Boost_USE_MULTITHREADED ON)
+find_package(Boost 1.53.0 REQUIRED)
+
+set(${CMAKE_PROJECT_NAME}_INCLUDE_DIR src/include)
+
+include_directories(
+    ${ZooKeeper_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIR}
+    ${${CMAKE_PROJECT_NAME}_INCLUDE_DIR})
 
 
 set(THRIFT_LIB ${CMAKE_PROJECT_NAME}-thrift)
