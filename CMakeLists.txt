@@ -22,7 +22,8 @@ endif()
 
 # Boost
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.53.0 REQUIRED)
+find_package(Boost 1.53.0 REQUIRED
+    COMPONENTS chrono system thread)
 
 set(${CMAKE_PROJECT_NAME}_INCLUDE_DIR src/include)
 
@@ -50,6 +51,7 @@ target_link_libraries(${WORKER_LIB}
 
 add_executable(${BROKER_EXE} ${BROKER_EXE_SRCS})
 target_link_libraries(${BROKER_EXE}
+    ${Boost_LIBRARIES}
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
 

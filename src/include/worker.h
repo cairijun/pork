@@ -26,11 +26,11 @@ namespace pork {
             id_t emit(
                     const std::string &queue_name,
                     const Message &msg,
-                    const std::vector<id_t> &deps) const;
+                    const std::vector<Dependency> &deps) const;
             id_t emit(
                     const std::string &queue_name,
                     const std::vector<Message> &msgs,
-                    const std::vector<id_t> &deps) const;
+                    const std::vector<Dependency> &deps) const;
 
         private:
             static zhandle_t* get_zk_handle(const std::vector<std::string>& zk_hosts);

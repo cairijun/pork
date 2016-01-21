@@ -84,9 +84,9 @@ namespace pork {
         while (true) {
             Message msg = msg_buffer.pop();
             if (process_message(msg)) {
-                broker->ack(msg.id);
+                broker->ack(queue_name, msg.id);
             } else {
-                broker->fail(msg.id);
+                broker->fail(queue_name, msg.id);
             }
         }
     }
@@ -94,7 +94,7 @@ namespace pork {
     id_t BaseWorker::emit(
             const std::string &queue_name,
             const Message &msg,
-            const std::vector<id_t> &deps) const
+            const std::vector<Dependency> &deps) const
     {
         return broker->addMessage(queue_name, msg, deps);
     }
@@ -102,7 +102,7 @@ namespace pork {
     id_t BaseWorker::emit(
             const std::string &queue_name,
             const std::vector<Message> &msgs,
-            const std::vector<id_t> &deps) const
+            const std::vector<Dependency> &deps) const
     {
         return broker->addMessageGroup(queue_name, msgs, deps);
     }
