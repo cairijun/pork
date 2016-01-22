@@ -2,7 +2,8 @@
 #define COMMON_H_AEFYHNIS
 
 namespace pork {
-    const char* ZNODE_BROKER_ADDR = "/pork/broker/addr";
+    static const char* ZNODE_BROKER_ADDR = "/pork/broker/addr";
+    static const char* ZNODE_ID_BLOCK_PREFIX = "/pork/id/block";
 }
 
 #define _CONCAT_TOKEN(x, y) x##y

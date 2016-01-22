@@ -27,7 +27,7 @@ namespace pork {
                     const std::string &queue_name,
                     const Message &msg,
                     const std::vector<Dependency> &deps) const;
-            id_t emit(
+            std::vector<id_t> emit(
                     const std::string &queue_name,
                     const std::vector<Message> &msgs,
                     const std::vector<Dependency> &deps) const;

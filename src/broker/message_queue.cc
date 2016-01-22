@@ -72,7 +72,7 @@ namespace pork {
     void MessageQueue::ack(id_t msg_id)
     {
         PORK_RLOCK(rlock_, all_msgs_mtx);
-        auto msg = all_msgs[msg_id];
+        auto msg = all_msgs.at(msg_id);
         rlock_all_msgs_mtx.unlock();
 
         msg->state = MessageState::ACKED;
@@ -117,7 +117,7 @@ namespace pork {
     void MessageQueue::fail(id_t msg_id)
     {
         PORK_RLOCK(rlock_, all_msgs_mtx);
-        all_msgs[msg_id]->state = MessageState::FAILED;
+        all_msgs.at(msg_id)->state = MessageState::FAILED;
     }
 
     void MessageQueue::push_free_message(const std::shared_ptr<InternalMessage>& msg)

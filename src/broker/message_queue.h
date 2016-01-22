@@ -40,6 +40,8 @@ namespace pork {
 
     class MessageQueue {
         public:
+            MessageQueue() {}
+            MessageQueue(const MessageQueue&) = delete;
             bool pop_free_message(Message& msg);
             void push_message(
                     const std::shared_ptr<Message>& msg,

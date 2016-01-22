@@ -19,7 +19,9 @@ struct Message {
 service Broker {
   Message getMessage(1: string queue_name, 2: id_t last_msg),
   id_t addMessage(1: string queue_name, 2: Message message, 3: list<Dependency> deps),
-  id_t addMessageGroup(1: string queue_name, 2: list<Message> messages, 3: list<Dependency> deps),
+  list<id_t> addMessageGroup(1: string queue_name, 2: list<Message> messages, 3: list<Dependency> deps),
   oneway void ack(1: string queue_name, 2: id_t msg_id),
   oneway void fail(1: string queue_name, 2: id_t msg_id),
 }
+
+exception Timeout {}

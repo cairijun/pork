@@ -99,12 +99,14 @@ namespace pork {
         return broker->addMessage(queue_name, msg, deps);
     }
 
-    id_t BaseWorker::emit(
+    std::vector<id_t> BaseWorker::emit(
             const std::string &queue_name,
             const std::vector<Message> &msgs,
             const std::vector<Dependency> &deps) const
     {
-        return broker->addMessageGroup(queue_name, msgs, deps);
+        std::vector<id_t> new_msg_ids;
+        broker->addMessageGroup(new_msg_ids, queue_name, msgs, deps);
+        return new_msg_ids;
     }
 
 } /* pork  */
