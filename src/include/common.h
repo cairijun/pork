@@ -1,7 +1,10 @@
 #ifndef COMMON_H_AEFYHNIS
 #define COMMON_H_AEFYHNIS
 
+#include <iostream>  // for debug use
+
 namespace pork {
+    static const char* ZNODE_PATHS_TO_CREATE[] = {"/pork", "/pork/broker", "/pork/id"};
     static const char* ZNODE_BROKER_ADDR = "/pork/broker/addr";
     static const char* ZNODE_ID_BLOCK_PREFIX = "/pork/id/block";
 }

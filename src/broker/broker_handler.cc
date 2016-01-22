@@ -18,10 +18,11 @@ namespace pork {
         zk_handle(zk_handle)
     {
         char zk_node_path_buf[256];
-        if (zoo_create(zk_handle.get(), ZNODE_ID_BLOCK_PREFIX, NULL, -1,
-                    &ZOO_CREATOR_ALL_ACL, ZOO_EPHEMERAL | ZOO_SEQUENCE,
-                    zk_node_path_buf, 256) != ZOK) {
-            // TODO: err handling
+        int ret = zoo_create(zk_handle.get(), ZNODE_ID_BLOCK_PREFIX, NULL, -1,
+                &ZOO_READ_ACL_UNSAFE, ZOO_EPHEMERAL | ZOO_SEQUENCE,
+                zk_node_path_buf, 256);
+        if (ret != ZOK) {
+            throw std::runtime_error(zerror(ret));
         }
         id_t block_id = boost::lexical_cast<id_t>(
                 zk_node_path_buf + strlen(ZNODE_ID_BLOCK_PREFIX));
