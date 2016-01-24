@@ -45,3 +45,45 @@ macro(add_thrift_library lib_name)
     target_include_directories(${lib_name} INTERFACE
         ${THRIFT_INCLUDE_DIRS} ${THRIFT_OUTPUT_DIR})
 endmacro()
+
+
+# GTest/GMock
+if(BUILD_TESTING)
+    include(ExternalProject)
+    ExternalProject_Add(googletest
+      GIT_REPOSITORY    https://github.com/google/googletest.git
+      GIT_TAG           master
+      SOURCE_DIR        "${CMAKE_BINARY_DIR}/googletest-src"
+      BINARY_DIR        "${CMAKE_BINARY_DIR}/googletest-build"
+      INSTALL_COMMAND   ""
+    )
+
+    ExternalProject_Get_Property(googletest BINARY_DIR SOURCE_DIR)
+    set(GMOCK_BIN_DIR ${BINARY_DIR}/googlemock)
+    set(GMOCK_SRC_DIR ${SOURCE_DIR}/googlemock)
+    set(GTEST_BIN_DIR ${GMOCK_BIN_DIR}/gtest)
+    set(GTEST_SRC_DIR ${SOURCE_DIR}/googletest)
+    add_library(gmock UNKNOWN IMPORTED)
+    add_library(gmock_main UNKNOWN IMPORTED)
+    set(GMOCK_LIB
+        ${GMOCK_BIN_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gmock${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(GMOCK_MAIN_LIB
+        ${GMOCK_BIN_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gmock_main${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set_target_properties(gmock PROPERTIES IMPORTED_LOCATION ${GMOCK_LIB})
+    set_target_properties(gmock_main PROPERTIES IMPORTED_LOCATION ${GMOCK_MAIN_LIB})
+    add_dependencies(gmock googletest)
+    add_dependencies(gmock_main googletest)
+
+    macro(add_gtest_target target srcs)
+        add_executable(${target} ${srcs})
+        target_link_libraries(${target} gmock gmock_main)
+        target_include_directories(${target} SYSTEM
+            PUBLIC ${GMOCK_SRC_DIR}/include
+            PUBLIC ${GTEST_SRC_DIR}/include)
+        add_test(NAME ${target} COMMAND ${target})
+    endmacro()
+else()
+    macro(add_gtest_target target srcs)
+        message(STATUS "Test target: ${target} skipped")
+    endmacro()
+endif()

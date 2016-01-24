@@ -4,6 +4,10 @@ project(Pork C CXX)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_THREAD_PREFER_PTHREAD ON)
+find_package(Threads REQUIRED)
+
+include(CTest)
 include(utils.cmake)
 
 
@@ -47,11 +51,13 @@ add_thrift_library(${THRIFT_LIB} ${THRIFT_LIB_SRCS})
 
 add_library(${WORKER_LIB} SHARED ${WORKER_LIB_SRCS})
 target_link_libraries(${WORKER_LIB}
+    Threads::Threads
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
 
 add_executable(${BROKER_EXE} ${BROKER_EXE_SRCS})
 target_link_libraries(${BROKER_EXE}
+    Threads::Threads
     ${Boost_LIBRARIES}
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
@@ -59,3 +65,6 @@ target_link_libraries(${BROKER_EXE}
 install(TARGETS ${WORKER_LIB} ${BROKER_EXE}
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib)
+
+
+add_subdirectory(tests)
