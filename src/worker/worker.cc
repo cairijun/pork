@@ -1,4 +1,5 @@
 #include <string>
+#include <tuple>
 #include <vector>
 #include <memory>
 #include <thread>
@@ -31,14 +32,14 @@ namespace pork {
         std::string host;
         uint16_t port;
         get_broker_address(host, port);
-        boost::shared_ptr<tft::transport::TTransport> socket(
-                new tft::transport::TSocket(host, port));
-        boost::shared_ptr<tft::transport::TTransport> transport(
-                new tft::transport::TBufferedTransport(socket),
-                [] (tft::transport::TTransport *p) { p->close(); });
-        boost::shared_ptr<tft::protocol::TProtocol> protocol(
-                new tft::protocol::TBinaryProtocol(transport));
-        broker.reset(new BrokerConcurrentClient(protocol));
+        init_broker_client(host, port, true);
+        init_broker_client(host, port, false);
+    }
+
+    BaseWorker::~BaseWorker()
+    {
+        broker_fetch_transport->close();
+        broker_process_transport->close();
     }
 
     zhandle_t* BaseWorker::get_zk_handle(const std::vector<std::string>& zk_hosts)
@@ -53,6 +54,24 @@ namespace pork {
         if (zk_handle) {
             zookeeper_close(zk_handle);  // TODO: errcode check
         }
+    }
+
+    void BaseWorker::init_broker_client(const std::string& host, uint16_t port, bool fetch)
+    {
+        boost::shared_ptr<tft::transport::TTransport> socket(
+                new tft::transport::TSocket(host, port));
+        boost::shared_ptr<tft::transport::TTransport> transport(
+                new tft::transport::TBufferedTransport(socket));
+        boost::shared_ptr<tft::protocol::TProtocol> protocol(
+                new tft::protocol::TBinaryProtocol(transport));
+        if (fetch) {
+            broker_fetch.reset(new BrokerClient(protocol));
+            broker_fetch_transport = transport;
+        } else {
+            broker_process.reset(new BrokerClient(protocol));
+            broker_process_transport = transport;
+        }
+        transport->open();
     }
 
     void BaseWorker::get_broker_address(std::string& host, uint16_t& port) const
@@ -73,7 +92,11 @@ namespace pork {
         while (true) {
             msg_buffer.wait_till_low();
             Message new_msg;
-            broker->getMessage(new_msg, queue_name, last_msg_id);
+            try {
+                broker_fetch->getMessage(new_msg, queue_name, last_msg_id);
+            } catch (const Timeout&) {
+                continue;
+            }
             msg_buffer.put(new_msg);
             last_msg_id = new_msg.id;
         }
@@ -84,9 +107,9 @@ namespace pork {
         while (true) {
             Message msg = msg_buffer.pop();
             if (process_message(msg)) {
-                broker->ack(queue_name, msg.id);
+                broker_process->ack(queue_name, msg.id);
             } else {
-                broker->fail(queue_name, msg.id);
+                broker_process->fail(queue_name, msg.id);
             }
         }
     }
@@ -96,7 +119,7 @@ namespace pork {
             const Message &msg,
             const std::vector<Dependency> &deps) const
     {
-        return broker->addMessage(queue_name, msg, deps);
+        return broker_process->addMessage(queue_name, msg, deps);
     }
 
     std::vector<id_t> BaseWorker::emit(
@@ -105,7 +128,7 @@ namespace pork {
             const std::vector<Dependency> &deps) const
     {
         std::vector<id_t> new_msg_ids;
-        broker->addMessageGroup(new_msg_ids, queue_name, msgs, deps);
+        broker_process->addMessageGroup(new_msg_ids, queue_name, msgs, deps);
         return new_msg_ids;
     }
 
