@@ -24,7 +24,8 @@ namespace pork {
 
     BaseWorker::BaseWorker(const std::vector<std::string>& zk_hosts,
             const std::string& queue_name):
-        zk_handle(get_zk_handle(zk_hosts), close_zk),
+        running(false),
+        zk_handle(get_zk_handle(zk_hosts)),
         msg_buffer(buf_low_water_mark, buf_high_water_mark),
         queue_name(queue_name),
         last_msg_id(-1)
@@ -38,8 +39,15 @@ namespace pork {
 
     BaseWorker::~BaseWorker()
     {
-        broker_fetch_transport->close();
-        broker_process_transport->close();
+        if (broker_fetch_transport) {
+            broker_fetch_transport->close();
+        }
+        if (broker_process_transport) {
+            broker_process_transport->close();
+        }
+        if (zk_handle) {
+            zookeeper_close(zk_handle);  // TODO: errcode check
+        }
     }
 
     zhandle_t* BaseWorker::get_zk_handle(const std::vector<std::string>& zk_hosts)
@@ -47,13 +55,6 @@ namespace pork {
         std::string hosts_str = boost::join(zk_hosts, ",");
         return zookeeper_init(
                 hosts_str.c_str(), nullptr, zk_recv_timeout, nullptr, nullptr, 0);
-    }
-
-    void BaseWorker::close_zk(zhandle_t *zk_handle)
-    {
-        if (zk_handle) {
-            zookeeper_close(zk_handle);  // TODO: errcode check
-        }
     }
 
     void BaseWorker::init_broker_client(const std::string& host, uint16_t port, bool fetch)
@@ -78,7 +79,7 @@ namespace pork {
     {
         char buf[256];
         int buf_size = sizeof(buf);
-        zoo_get(zk_handle.get(), ZNODE_BROKER_ADDR,
+        zoo_get(zk_handle, ZNODE_BROKER_ADDR,
                 0, buf, &buf_size, nullptr);  // TODO: errcode check
         host.assign(buf, buf_size);
         size_t semicolon_pos = host.rfind(':');
@@ -88,8 +89,12 @@ namespace pork {
 
     void BaseWorker::run()
     {
+        if (running) {
+            return;
+        }
+        running = true;
         std::thread processing_thread(&BaseWorker::process, this);
-        while (true) {
+        while (running) {
             msg_buffer.wait_till_low();
             Message new_msg;
             try {
@@ -100,16 +105,26 @@ namespace pork {
             msg_buffer.put(new_msg);
             last_msg_id = new_msg.id;
         }
+        processing_thread.join();
+    }
+
+    void BaseWorker::stop()
+    {
+        running = false;
     }
 
     void BaseWorker::process()
     {
-        while (true) {
-            Message msg = msg_buffer.pop();
-            if (process_message(msg)) {
-                broker_process->ack(queue_name, msg.id);
-            } else {
-                broker_process->fail(queue_name, msg.id);
+        while (running) {
+            try {
+                Message msg = msg_buffer.pop(1000);
+                if (process_message(msg)) {
+                    broker_process->ack(queue_name, msg.id);
+                } else {
+                    broker_process->fail(queue_name, msg.id);
+                }
+            } catch (const decltype(msg_buffer)::Timeout&) {
+                // do nothing
             }
         }
     }

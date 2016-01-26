@@ -100,6 +100,12 @@ TEST(FlowControlQueue, PopEmptyQueue)
     }
 }
 
+TEST(FlowControlQueue, PopEmptyTimeout)
+{
+    FlowControlQueue<int> q(2, 5);
+    EXPECT_THROW(q.pop(100), FlowControlQueue<int>::Timeout);
+}
+
 void TestWaitWaterMark(bool low)
 {
     int n_threads = 20;  // must be even!

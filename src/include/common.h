@@ -3,11 +3,22 @@
 
 #include <iostream>  // for debug use
 
+#define BOOST_LOG_DYN_LINK 1
+#include <boost/log/trivial.hpp>
+
+using namespace boost::log::trivial;
+
 namespace pork {
     static const char* ZNODE_PATHS_TO_CREATE[] = {"/pork", "/pork/broker", "/pork/id"};
     static const char* ZNODE_BROKER_ADDR = "/pork/broker/addr";
     static const char* ZNODE_ID_BLOCK_PREFIX = "/pork/id/block";
 }
+
+#define LOG_DEBUG BOOST_LOG_TRIVIAL(debug)
+#define LOG_INFO BOOST_LOG_TRIVIAL(info)
+#define LOG_WARNING BOOST_LOG_TRIVIAL(warning)
+#define LOG_ERROR BOOST_LOG_TRIVIAL(error)
+#define LOG_FATAL BOOST_LOG_TRIVIAL(fatal)
 
 #define _CONCAT_TOKEN(x, y) x##y
 #define CONTCAT_TOKEN(x, y) _CONCAT_TOKEN(x, y)

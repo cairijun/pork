@@ -2,6 +2,7 @@
 #define FLOW_CONTROL_QUEUE_H_SJ08BHB6
 
 #include <condition_variable>
+#include <chrono>
 #include <cstddef>
 #include <mutex>
 #include <queue>
@@ -15,7 +16,7 @@ namespace pork {
             FlowControlQueue(const FlowControlQueue&) = delete;
 
             void put(const T& data);
-            T pop();
+            T pop(int wait_ms = -1);
 
             std::unique_lock<std::mutex> wait_till_high(bool hold = false);
             std::unique_lock<std::mutex> wait_till_low(bool hold = false);
@@ -24,6 +25,8 @@ namespace pork {
             bool empty() const { return _q.empty(); }
             bool high() const { return size() >= _high_water_mark; }
             bool low() const { return size() <= _low_water_mark; }
+
+            class Timeout {};
 
         private:
             size_t _low_water_mark;
@@ -60,11 +63,18 @@ namespace pork {
     }
 
     template<typename T>
-    T FlowControlQueue<T>::pop()
+    T FlowControlQueue<T>::pop(int wait_ms)
     {
         std::unique_lock<std::mutex> _lock(_mtx);
-        while (empty()) {
-            _cv_not_empty.wait(_lock);
+        if (wait_ms < 0) {
+            while (empty()) {
+                _cv_not_empty.wait(_lock);
+            }
+        } else {
+            if (!_cv_not_empty.wait_for(_lock, std::chrono::milliseconds(wait_ms),
+                    [this] () { return !empty(); })) {
+                throw Timeout();
+            }
         }
         T data = _q.front();
         _q.pop();

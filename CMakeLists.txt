@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 project(Pork C CXX)
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
@@ -28,7 +28,7 @@ endif()
 # Boost
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost 1.53.0 REQUIRED
-    COMPONENTS chrono system thread)
+    COMPONENTS chrono system thread log)
 
 set(${CMAKE_PROJECT_NAME}_INCLUDE_DIR src/include)
 
@@ -49,9 +49,10 @@ file(GLOB BROKER_EXE_SRCS src/broker/*.cc)
 
 add_thrift_library(${THRIFT_LIB} ${THRIFT_LIB_SRCS})
 
-add_library(${WORKER_LIB} SHARED ${WORKER_LIB_SRCS})
+add_library(${WORKER_LIB} STATIC ${WORKER_LIB_SRCS})
 target_link_libraries(${WORKER_LIB}
     Threads::Threads
+    ${Boost_LIBRARIES}
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
 
@@ -64,7 +65,8 @@ target_link_libraries(${BROKER_EXE}
 
 install(TARGETS ${WORKER_LIB} ${BROKER_EXE}
     RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib)
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
 
 
 add_subdirectory(tests)
