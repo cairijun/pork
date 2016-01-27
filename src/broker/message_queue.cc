@@ -79,7 +79,10 @@ namespace pork {
         if (msg->msg->__isset.resolve_dep) {
             PORK_RLOCK(rlock_, all_deps_mtx);
             auto dep_iter = all_deps.find(msg->msg->resolve_dep);
-            if (dep_iter != all_deps.end()) {
+            if (dep_iter == all_deps.end()) {
+                PORK_RLOCK_UPGRADE(rlock_all_deps_mtx);
+                all_deps[msg->msg->resolve_dep].reset(new InternalDependency(1));
+            } else {
                 auto& dep = dep_iter->second;
                 ++dep->n_resolved;
 

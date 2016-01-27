@@ -35,7 +35,7 @@ namespace pork {
     struct InternalDependency {
         std::atomic_int n_resolved;
         std::list<std::shared_ptr<InternalMessage>> dependants;
-        InternalDependency(): n_resolved(0) {}
+        InternalDependency(int resolved = 0): n_resolved(resolved) {}
     };
 
     class MessageQueue {
