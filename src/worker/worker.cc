@@ -27,8 +27,7 @@ namespace pork {
         running(false),
         zk_handle(get_zk_handle(zk_hosts)),
         msg_buffer(buf_low_water_mark, buf_high_water_mark),
-        queue_name(queue_name),
-        last_msg_id(-1)
+        queue_name(queue_name)
     {
         std::string host;
         uint16_t port;

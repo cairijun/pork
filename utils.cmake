@@ -52,7 +52,7 @@ if(BUILD_TESTING)
     include(ExternalProject)
     ExternalProject_Add(googletest
       GIT_REPOSITORY    https://github.com/google/googletest.git
-      GIT_TAG           master
+      GIT_TAG           82b11b8cfcca464c2ac74b623d04e74452e74f32
       SOURCE_DIR        "${CMAKE_BINARY_DIR}/googletest-src"
       BINARY_DIR        "${CMAKE_BINARY_DIR}/googletest-build"
       INSTALL_COMMAND   ""

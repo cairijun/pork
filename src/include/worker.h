@@ -21,7 +21,8 @@ using apache::thrift::transport::TTransport;
 namespace pork {
 
     class BaseWorker {
-        template<typename T> friend class TestWorker;
+        friend class TestingWorker;
+        friend class WorkerTest;
 
         public:
             BaseWorker(const std::vector<std::string> &zk_servers,
@@ -56,13 +57,12 @@ namespace pork {
             boost::shared_ptr<TTransport> broker_fetch_transport;
             std::shared_ptr<BrokerIf> broker_process;
             boost::shared_ptr<TTransport> broker_process_transport;
-            id_t last_msg_id;
+            id_t last_msg_id = -1;
 
             static const int zk_recv_timeout = 3000;
             static const int buf_low_water_mark = 3;
             static const int buf_high_water_mark = 5;
 
-        public:
             // for testing
             BaseWorker(const std::string& queue_name,
                     const std::shared_ptr<BrokerIf>& broker_fetch,
