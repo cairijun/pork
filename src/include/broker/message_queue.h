@@ -39,6 +39,8 @@ namespace pork {
     };
 
     class MessageQueue {
+        friend class BrokerMqTest;
+
         public:
             MessageQueue() {}
             MessageQueue(const MessageQueue&) = delete;
@@ -63,7 +65,7 @@ namespace pork {
             boost::upgrade_mutex all_msgs_mtx;
             boost::upgrade_mutex all_deps_mtx;
 
-            static const boost::chrono::milliseconds POP_FREE_TIMEOUT;
+            static boost::chrono::milliseconds POP_FREE_TIMEOUT;
     };
 
 } /* pork  */

@@ -11,7 +11,7 @@
 #include <zookeeper/zookeeper.h>
 
 #include "Broker.h"
-#include "message_queue.h"
+#include "broker/message_queue.h"
 #include "proto_types.h"
 
 namespace pork {

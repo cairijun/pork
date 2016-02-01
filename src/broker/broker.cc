@@ -9,7 +9,7 @@
 #include <zookeeper/zookeeper.h>
 
 #include "Broker.h"
-#include "broker_handler.h"
+#include "broker/broker_handler.h"
 #include "common.h"
 
 using namespace pork;

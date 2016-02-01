@@ -8,7 +8,7 @@
 #include <boost/thread/lock_factories.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
-#include "broker_handler.h"
+#include "broker/broker_handler.h"
 #include "common.h"
 #include "proto_types.h"
 

@@ -6,13 +6,13 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
+#include "broker/message_queue.h"
 #include "common.h"
-#include "message_queue.h"
 #include "proto_types.h"
 
 namespace pork {
 
-    const boost::chrono::milliseconds MessageQueue::POP_FREE_TIMEOUT(5000);
+    boost::chrono::milliseconds MessageQueue::POP_FREE_TIMEOUT(5000);
 
     bool MessageQueue::pop_free_message(Message& msg)
     {
@@ -62,10 +62,10 @@ namespace pork {
                     intern_dep->dependants.push_back(intern_msg);
                 }
             }
-        }
 
-        if (intern_msg->n_deps == 0) {  // check if there are really some deps
-            push_free_message(intern_msg);
+            if (intern_msg->n_deps == 0) {  // check if there are really some deps
+                push_free_message(intern_msg);
+            }
         }
     }
 
@@ -74,6 +74,10 @@ namespace pork {
         PORK_RLOCK(rlock_, all_msgs_mtx);
         auto msg = all_msgs.at(msg_id);
         rlock_all_msgs_mtx.unlock();
+
+        if (msg->state != MessageState::IN_PROGRESS) {
+            return;
+        }
 
         msg->state = MessageState::ACKED;
         if (msg->msg->__isset.resolve_dep) {
