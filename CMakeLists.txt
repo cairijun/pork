@@ -39,13 +39,16 @@ include_directories(
 
 
 set(THRIFT_LIB ${CMAKE_PROJECT_NAME}-thrift)
-file(GLOB THRIFT_LIB_SRCS src/thrift/*.thrift)
+join_paths(THRIFT_LIB_SRCS src/thrift proto.thrift)
 
 set(WORKER_LIB ${CMAKE_PROJECT_NAME}-worker)
-file(GLOB WORKER_LIB_SRCS src/worker/*.cc)
+join_paths(WORKER_LIB_SRCS src/worker worker.cc)
 
 set(BROKER_EXE ${CMAKE_PROJECT_NAME}-broker)
-file(GLOB BROKER_EXE_SRCS src/broker/*.cc)
+set(BROKER_LIB ${BROKER_EXE}-lib)
+join_paths(BROKER_LIB_SRCS src/broker
+    message_queue.h message_queue.cc
+    broker_handler.h broker_handler.cc)
 
 add_thrift_library(${THRIFT_LIB} ${THRIFT_LIB_SRCS})
 
@@ -56,12 +59,15 @@ target_link_libraries(${WORKER_LIB}
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
 
-add_executable(${BROKER_EXE} ${BROKER_EXE_SRCS})
-target_link_libraries(${BROKER_EXE}
+add_library(${BROKER_LIB} STATIC ${BROKER_LIB_SRCS})
+target_link_libraries(${BROKER_LIB}
     Threads::Threads
     ${Boost_LIBRARIES}
     ${THRIFT_LIB}
     ${ZooKeeper_LIB})
+
+add_executable(${BROKER_EXE} src/broker/broker.cc)
+target_link_libraries(${BROKER_EXE} ${BROKER_LIB})
 
 install(TARGETS ${WORKER_LIB} ${BROKER_EXE}
     RUNTIME DESTINATION bin

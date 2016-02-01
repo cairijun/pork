@@ -1,3 +1,11 @@
+macro(join_paths var dir)
+    foreach(_file ${ARGN})
+        get_filename_component(_full_path ${_file} ABSOLUTE BASE_DIR ${dir})
+        list(APPEND ${var} ${_full_path})
+    endforeach()
+endmacro()
+
+
 # thrift related stuff
 find_package(PkgConfig REQUIRED)
 
@@ -16,10 +24,11 @@ macro(add_thrift_library lib_name)
     set(TIMESTAMP_FILE ${THRIFT_OUTPUT_DIR}/_${lib_name}_generated_timestamp)
 
     foreach(src ${ARGN})
-        if(${src} IS_NEWER_THAN ${TIMESTAMP_FILE})
+        set(_src ${CMAKE_CURRENT_SOURCE_DIR}/${src})
+        if(${_src} IS_NEWER_THAN ${TIMESTAMP_FILE})
             message(STATUS "Generating thrift code for ${src}")
             execute_process(
-                COMMAND ${THRIFT_BIN} -out ${THRIFT_OUTPUT_DIR} --gen cpp ${src})
+                COMMAND ${THRIFT_BIN} -out ${THRIFT_OUTPUT_DIR} --gen cpp ${_src})
             set(GENERATED 1)
         endif()
     endforeach()
