@@ -18,7 +18,7 @@ namespace pork {
 
     class BrokerHandler: public BrokerIf {
         public:
-            BrokerHandler(const std::shared_ptr<zhandle_t>& zk_handle);
+            BrokerHandler(zhandle_t* zk_handle);
             BrokerHandler(const BrokerHandler&) = delete;
             void getMessage(
                     Message& _return,
@@ -36,15 +36,22 @@ namespace pork {
             void ack(const std::string& queue_name, const id_t msg_id) override;
             void fail(const std::string& queue_name, const id_t msg_id) override;
 
+        protected:
+            // for testing
+            BrokerHandler():next_id(0) {}
+            virtual std::shared_ptr<AbstractMessageQueue> create_mq();
+
+            std::unordered_map<std::string, std::shared_ptr<AbstractMessageQueue>> queues;
+
         private:
-            std::unordered_map<std::string, std::unique_ptr<MessageQueue>> queues;
             boost::upgrade_mutex queues_mtx;
             std::atomic<id_t> next_id;
 
-            std::unique_ptr<MessageQueue>& ensure_queue(const std::string& queue_name);
+            std::shared_ptr<AbstractMessageQueue> ensure_queue(
+                    const std::string& queue_name);
             id_t get_next_id();
 
-            std::shared_ptr<zhandle_t> zk_handle;
+            zhandle_t* zk_handle;
     };
 
 } /* pork  */

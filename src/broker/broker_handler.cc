@@ -14,11 +14,11 @@
 
 namespace pork {
 
-    BrokerHandler::BrokerHandler(const std::shared_ptr<zhandle_t>& zk_handle):
+    BrokerHandler::BrokerHandler(zhandle_t* zk_handle):
         zk_handle(zk_handle)
     {
         char zk_node_path_buf[256];
-        int ret = zoo_create(zk_handle.get(), ZNODE_ID_BLOCK_PREFIX, NULL, -1,
+        int ret = zoo_create(zk_handle, ZNODE_ID_BLOCK_PREFIX, NULL, -1,
                 &ZOO_READ_ACL_UNSAFE, ZOO_EPHEMERAL | ZOO_SEQUENCE,
                 zk_node_path_buf, 256);
         if (ret != ZOK) {
@@ -56,7 +56,7 @@ namespace pork {
             const std::vector<Message>& messages,
             const std::vector<Dependency>& deps)
     {
-        auto& q = ensure_queue(queue_name);
+        auto q = ensure_queue(queue_name);
         _return.clear();
         for (auto& m : messages) {
             auto msg = std::make_shared<Message>(m);
@@ -76,14 +76,18 @@ namespace pork {
         ensure_queue(queue_name)->fail(msg_id);
     }
 
-    std::unique_ptr<MessageQueue>& BrokerHandler::ensure_queue(
+    std::shared_ptr<AbstractMessageQueue> BrokerHandler::create_mq() {
+        return std::shared_ptr<MessageQueue>(new MessageQueue());
+    }
+
+    std::shared_ptr<AbstractMessageQueue> BrokerHandler::ensure_queue(
             const std::string& queue_name)
     {
         PORK_RLOCK(rlock_, queues_mtx);
         auto q_iter = queues.find(queue_name);
         if (q_iter == queues.end()) {
             PORK_RLOCK_UPGRADE(rlock_queues_mtx);
-            queues[queue_name].reset(new MessageQueue());
+            queues[queue_name] = create_mq();
             q_iter = queues.find(queue_name);
         }
         return q_iter->second;

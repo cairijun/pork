@@ -50,7 +50,7 @@ int main() {
     }
 
     // thrift uses boost's smart ptrs
-    auto handler = boost::make_shared<BrokerHandler>(zk_handle);
+    auto handler = boost::make_shared<BrokerHandler>(zk_handle.get());
     TThreadedServer server(
             boost::make_shared<BrokerProcessor>(handler),
             boost::make_shared<TServerSocket>(6783),

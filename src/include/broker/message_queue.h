@@ -36,18 +36,28 @@ namespace pork {
         InternalDependency(int resolved = 0): n_resolved(resolved) {}
     };
 
-    class MessageQueue {
+    class AbstractMessageQueue {
+        public:
+            virtual bool pop_free_message(Message& msg) = 0;
+            virtual void push_message(
+                    const std::shared_ptr<Message>& msg,
+                    const std::vector<Dependency>& deps) = 0;
+            virtual void ack(id_t msg_id) = 0;
+            virtual void fail(id_t msg_id) = 0;
+    };
+
+    class MessageQueue: public AbstractMessageQueue {
         friend class BrokerMqTest;
 
         public:
             MessageQueue() {}
             MessageQueue(const MessageQueue&) = delete;
-            bool pop_free_message(Message& msg);
+            bool pop_free_message(Message& msg) override;
             void push_message(
                     const std::shared_ptr<Message>& msg,
-                    const std::vector<Dependency>& deps);
-            void ack(id_t msg_id);
-            void fail(id_t msg_id);
+                    const std::vector<Dependency>& deps) override;
+            void ack(id_t msg_id) override;
+            void fail(id_t msg_id) override;
 
         private:
             void push_free_message(const std::shared_ptr<InternalMessage>& msg);
