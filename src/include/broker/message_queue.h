@@ -17,18 +17,16 @@
 
 namespace pork {
 
-    struct MessageState {
-        enum type { QUEUING, IN_PROGRESS, FAILED, ACKED };
-    };
+    enum class MessageState { QUEUING, IN_PROGRESS, FAILED, ACKED };
 
     struct InternalMessage {
         const std::shared_ptr<Message> msg;
-        std::atomic<MessageState::type> state;
+        std::atomic<MessageState> state;
         std::atomic_int n_deps;
         InternalMessage(
                 const std::shared_ptr<Message>& msg,
                 int n_deps = 0,
-                MessageState::type state = MessageState::QUEUING):
+                MessageState state = MessageState::QUEUING):
             msg(msg), state(state), n_deps(n_deps) {}
     };
 
