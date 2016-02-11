@@ -12,3 +12,6 @@ target_link_libraries(test_broker_mq
 add_gtest_target(test_broker_handler test_broker_handler.cc)
 target_link_libraries(test_broker_handler
     ${BROKER_LIB} Threads::Threads)
+
+add_executable(testing_worker testing_worker.cc)
+target_link_libraries(testing_worker ${WORKER_LIB})
