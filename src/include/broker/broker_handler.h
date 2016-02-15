@@ -16,7 +16,7 @@
 
 namespace pork {
 
-    class BrokerHandler: public BrokerIf {
+    class BrokerHandler: virtual public BrokerIf {
         public:
             BrokerHandler(zhandle_t* zk_handle);
             BrokerHandler(const BrokerHandler&) = delete;
@@ -42,8 +42,6 @@ namespace pork {
             virtual std::shared_ptr<AbstractMessageQueue> create_mq();
 
             std::unordered_map<std::string, std::shared_ptr<AbstractMessageQueue>> queues;
-
-        private:
             boost::upgrade_mutex queues_mtx;
             std::atomic<id_t> next_id;
 

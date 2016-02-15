@@ -39,7 +39,7 @@ include_directories(
 
 
 set(THRIFT_LIB ${CMAKE_PROJECT_NAME}-thrift)
-join_paths(THRIFT_LIB_SRCS src/thrift proto.thrift)
+join_paths(THRIFT_LIB_SRCS src/thrift proto.thrift internal.thrift)
 
 set(WORKER_LIB ${CMAKE_PROJECT_NAME}-worker)
 join_paths(WORKER_LIB_SRCS src/worker worker.cc)
@@ -48,7 +48,8 @@ set(BROKER_EXE ${CMAKE_PROJECT_NAME}-broker)
 set(BROKER_LIB ${BROKER_EXE}-lib)
 join_paths(BROKER_LIB_SRCS src/broker
     message_queue.cc
-    broker_handler.cc)
+    broker_handler.cc
+    broker_internal.cc)
 
 add_thrift_library(${THRIFT_LIB} ${THRIFT_LIB_SRCS})
 

@@ -9,7 +9,7 @@
 #include <zookeeper/zookeeper.h>
 
 #include "Broker.h"
-#include "broker/broker_handler.h"
+#include "broker/broker_internal.h"
 #include "common.h"
 
 using namespace pork;
@@ -50,9 +50,9 @@ int main() {
     }
 
     // thrift uses boost's smart ptrs
-    auto handler = boost::make_shared<BrokerHandler>(zk_handle.get());
+    auto handler = boost::make_shared<BrokerInternalHandler>(zk_handle.get());
     TThreadedServer server(
-            boost::make_shared<BrokerProcessor>(handler),
+            boost::make_shared<BrokerInternalProcessor>(handler),
             boost::make_shared<TServerSocket>(6783),
             boost::make_shared<TBufferedTransportFactory>(),
             boost::make_shared<TBinaryProtocolFactory>());

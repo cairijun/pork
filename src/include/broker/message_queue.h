@@ -14,19 +14,18 @@
 #include <boost/thread/shared_mutex.hpp>
 
 #include "proto_types.h"
+#include "internal_types.h"
 
 namespace pork {
 
-    enum class MessageState { QUEUING, IN_PROGRESS, FAILED, ACKED };
-
     struct InternalMessage {
         const std::shared_ptr<Message> msg;
-        std::atomic<MessageState> state;
+        std::atomic<MessageState::type> state;
         std::atomic_int n_deps;
         InternalMessage(
                 const std::shared_ptr<Message>& msg,
                 int n_deps = 0,
-                MessageState state = MessageState::QUEUING):
+                MessageState::type state = MessageState::QUEUING):
             msg(msg), state(state), n_deps(n_deps) {}
     };
 
