@@ -14,6 +14,27 @@ namespace pork {
 
     boost::chrono::milliseconds MessageQueue::POP_FREE_TIMEOUT(5000);
 
+    MessageQueue::MessageQueue(const QueueSdto& sdto): MessageQueue()
+    {
+        for (auto& m : sdto.all_msgs) {
+            all_msgs[m.first] = std::make_shared<InternalMessage>(
+                    std::make_shared<Message>(m.second.msg),
+                    m.second.n_deps, m.second.state);
+            if (m.second.n_deps == 0 && m.second.state == MessageState::QUEUING) {
+                free_msgs.push_back(all_msgs[m.first]);
+            }
+        }
+
+        for (auto& d : sdto.all_deps) {
+            std::unique_ptr<InternalDependency> dep(
+                    new InternalDependency(d.second.n_resolved));
+            for (id_t id : d.second.dependant_ids) {
+                dep->dependants.push_back(all_msgs[id]);
+            }
+            all_deps.emplace(d.first, std::move(dep));
+        }
+    }
+
     bool MessageQueue::pop_free_message(Message& msg)
     {
         boost::unique_lock<boost::mutex> lock(free_msgs_mtx);
@@ -23,7 +44,7 @@ namespace pork {
             auto intern_msg = free_msgs.front();
             intern_msg->state = MessageState::IN_PROGRESS;
             msg = *intern_msg->msg;
-            free_msgs.pop();
+            free_msgs.pop_front();
             return true;
         } else {  // timeout
             return false;
@@ -107,7 +128,7 @@ namespace pork {
                         if ((*i)->n_deps == 0) {
                             // push_free_message is not used here to avoid
                             // repeatedly locking-unlocking free_msgs_mtx
-                            free_msgs.push(*i);
+                            free_msgs.push_back(*i);
                             i = dep->dependants.erase(i);
                         } else {
                             ++i;
@@ -130,7 +151,7 @@ namespace pork {
     void MessageQueue::push_free_message(const std::shared_ptr<InternalMessage>& msg)
     {
         PORK_LOCK(free_msgs_mtx);
-        free_msgs.push(msg);
+        free_msgs.push_back(msg);
         if (free_msgs.size() == 1) {
             // must notify all here. consider multiple threads waiting while
             // multiple threads pushing msgs, and the pushing threads are

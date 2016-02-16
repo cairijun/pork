@@ -17,9 +17,13 @@ struct DependencySdto {
   2: list<proto.id_t> dependant_ids,
 }
 
-struct SnapshotSdto {
+struct QueueSdto {
   1: map<proto.id_t, MessageSdto> all_msgs,
   2: map<string, DependencySdto> all_deps,
+}
+
+struct SnapshotSdto {
+  1: map<string, QueueSdto> queues;
 }
 
 service BrokerInternal extends proto.Broker {

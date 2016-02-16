@@ -9,7 +9,7 @@ namespace pork {
     class BrokerInternalHandler: public BrokerInternalIf, public BrokerHandler {
         public:
             using BrokerHandler::BrokerHandler;
-            void syncSnapshot(const SnapshotSdto& op) override;
+            void syncSnapshot(const SnapshotSdto& snapshot) override;
             void syncSetMessageState(
                     const std::string& queue_name,
                     const id_t msg_id,
