@@ -13,7 +13,7 @@ pkg_check_modules(THRIFT REQUIRED thrift)
 pkg_get_variable(THRIFT_EXEC_PREFIX thrift exec_prefix)
 find_program(THRIFT_BIN thrift ${THRIFT_EXEC_PREFIX}/bin)
 foreach(lib ${THRIFT_LIBRARIES})
-    find_library(lib_full_path ${lib} PATHS ${THRIFT_LIBRARY_DIRS} NO_DEFAULT_PATH)
+    find_library(lib_full_path ${lib} PATHS ${THRIFT_LIBRARY_DIRS})
     list(APPEND _THRIFT_LIBRARIES ${lib_full_path})
 endforeach()
 
@@ -58,12 +58,19 @@ endmacro()
 
 # GTest/GMock
 if(BUILD_TESTING)
+    include(CheckIncludeFileCXX)
+    CHECK_INCLUDE_FILE_CXX(tr1/tuple TR1_TUPLE)
+    if(NOT TR1_TUPLE STREQUAL "TR1_TUPLE-NOTFOUND")
+        add_definitions(-DGTEST_USE_OWN_TR1_TUPLE=0)
+    endif()
+
     include(ExternalProject)
     ExternalProject_Add(googletest
       GIT_REPOSITORY    https://github.com/google/googletest.git
       GIT_TAG           82b11b8cfcca464c2ac74b623d04e74452e74f32
       SOURCE_DIR        "${CMAKE_BINARY_DIR}/googletest-src"
       BINARY_DIR        "${CMAKE_BINARY_DIR}/googletest-build"
+      CMAKE_ARGS        -DCMAKE_CXX_STANDARD=11
       INSTALL_COMMAND   ""
     )
 
