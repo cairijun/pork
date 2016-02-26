@@ -2,9 +2,12 @@ namespace * pork
 
 include "proto.thrift"
 
-enum SyncOpType { SET_STATE, NEW_MSG }
-
-enum MessageState { QUEUING, IN_PROGRESS, ACKED, FAILED }
+enum MessageState {
+  QUEUING = 0,
+  IN_PROGRESS = 1,
+  FAILED = 2,
+  ACKED = 3,
+}
 
 struct MessageSdto {
   1: proto.Message msg,

@@ -59,6 +59,10 @@ namespace pork {
                 failed_msgs.push_back(msg_id);
             }
 
+            void set_msg_state(id_t msg_id, MessageState::type state) override {
+                throw "Not implemented yet!";
+            }
+
             std::deque<Message> free_msgs;
             std::deque<std::tuple<const std::shared_ptr<Message>,
                                   const std::vector<Dependency>>> pushed_msgs;

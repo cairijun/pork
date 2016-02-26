@@ -43,6 +43,9 @@ namespace pork {
                     const std::vector<Dependency>& deps) = 0;
             virtual void ack(id_t msg_id) = 0;
             virtual void fail(id_t msg_id) = 0;
+
+            // for synchronization
+            virtual void set_msg_state(id_t msg_id, MessageState::type state) = 0;
     };
 
     class MessageQueue: public AbstractMessageQueue {
@@ -50,7 +53,6 @@ namespace pork {
 
         public:
             MessageQueue() {}
-            explicit MessageQueue(const QueueSdto& sdto);
             MessageQueue(const MessageQueue&) = delete;
             bool pop_free_message(Message& msg) override;
             void push_message(
@@ -59,8 +61,13 @@ namespace pork {
             void ack(id_t msg_id) override;
             void fail(id_t msg_id) override;
 
+            // for synchronization
+            explicit MessageQueue(const QueueSdto& sdto);
+            void set_msg_state(id_t msg_id, MessageState::type state) override;
+
         private:
             void push_free_message(const std::shared_ptr<InternalMessage>& msg);
+            void ack(id_t msg_id, bool update_free_msgs);
 
             std::deque<std::shared_ptr<InternalMessage>> free_msgs;
             // change all shared_ptrs other than the following one to weak_ptrs?

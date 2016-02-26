@@ -20,6 +20,7 @@ namespace pork {
             const id_t msg_id,
             const MessageState::type state)
     {
+        ensure_queue(queue_name)->set_msg_state(msg_id, state);
     }
 
     void BrokerInternalHandler::syncAddMessages(
@@ -27,5 +28,9 @@ namespace pork {
             const std::vector<Message>& msgs,
             const std::vector<Dependency>& deps)
     {
+        auto q = ensure_queue(queue_name);
+        for (auto& m : msgs) {
+            q->push_message(std::make_shared<Message>(m), deps);
+        }
     }
 }

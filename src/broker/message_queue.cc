@@ -35,6 +35,31 @@ namespace pork {
         }
     }
 
+    void MessageQueue::set_msg_state(id_t msg_id, MessageState::type state)
+    {
+        PORK_RLOCK(rlock_, all_msgs_mtx);
+        auto msg_iter = all_msgs.find(msg_id);
+        if (msg_iter == all_msgs.end()) {  // set_state before add_msg
+            PORK_RLOCK_UPGRADE(rlock_all_msgs_mtx);
+            all_msgs[msg_id] = std::make_shared<InternalMessage>(nullptr, 0, state);
+        } else {
+            rlock_all_msgs_mtx.unlock();
+            auto msg = msg_iter->second;
+
+            // we don't have per-msg locks. the following CAS loop guarantees the state
+            // to be updated only when the new state is in a latter stage than any
+            // previous set_state operations.
+            MessageState::type orig = msg->state;
+            while (orig < state && !msg->state.compare_exchange_weak(orig, state));
+
+            if (orig < state) {  // did being updated
+                if (state == MessageState::ACKED) {
+                    ack(msg_id, false);
+                }
+            }
+        }
+    }
+
     bool MessageQueue::pop_free_message(Message& msg)
     {
         boost::unique_lock<boost::mutex> lock(free_msgs_mtx);
@@ -90,7 +115,7 @@ namespace pork {
         }
     }
 
-    void MessageQueue::ack(id_t msg_id)
+    void MessageQueue::ack(id_t msg_id, bool update_free_msgs)
     {
         PORK_RLOCK(rlock_, all_msgs_mtx);
         auto msg = all_msgs.at(msg_id);
@@ -122,24 +147,36 @@ namespace pork {
 
                 if (has_free_msg) {
                     PORK_RLOCK_UPGRADE(rlock_all_deps_mtx);
-                    PORK_LOCK(free_msgs_mtx);
+                    if (update_free_msgs) {
+                        PORK_LOCK(free_msgs_mtx);
+                    }
                     auto i = dep->dependants.begin();
                     while (i != dep->dependants.end()) {
                         if ((*i)->n_deps == 0) {
                             // push_free_message is not used here to avoid
                             // repeatedly locking-unlocking free_msgs_mtx
-                            free_msgs.push_back(*i);
+                            if (update_free_msgs) {
+                                free_msgs.push_back(*i);
+                            }
                             i = dep->dependants.erase(i);
                         } else {
                             ++i;
                         }
                     }
-                    // we are not sure if there was only one free msg being added,
-                    // just notify all
-                    free_msgs_not_empty_cv.notify_all();
+
+                    if (update_free_msgs) {
+                        // we are not sure if there was only one free msg being added,
+                        // just notify all
+                        free_msgs_not_empty_cv.notify_all();
+                    }
                 }
             }
         }
+    }
+
+    void MessageQueue::ack(id_t msg_id)
+    {
+        ack(msg_id, true);
     }
 
     void MessageQueue::fail(id_t msg_id)
