@@ -16,6 +16,7 @@ namespace pork {
 
     MessageQueue::MessageQueue(const QueueSdto& sdto): MessageQueue()
     {
+        is_serving = false;
         for (auto& m : sdto.all_msgs) {
             all_msgs[m.first] = std::make_shared<InternalMessage>(
                     std::make_shared<Message>(m.second.msg),
@@ -54,10 +55,28 @@ namespace pork {
 
             if (orig < state) {  // did being updated
                 if (state == MessageState::ACKED) {
-                    ack(msg_id, false);
+                    ack(msg_id);
                 }
             }
         }
+    }
+
+    void MessageQueue::start_serving()
+    {
+        // ensure there is no other writing operations
+        PORK_LOCK(all_msgs_mtx);
+        PORK_LOCK(all_deps_mtx);
+        PORK_LOCK(free_msgs_mtx);
+
+        free_msgs.clear();
+        for (auto& m : all_msgs) {
+            if (m.second->state == MessageState::QUEUING && m.second->n_deps == 0) {
+                free_msgs.push_back(m.second);
+            }
+        }
+
+        is_serving = true;
+        free_msgs_not_empty_cv.notify_all();
     }
 
     bool MessageQueue::pop_free_message(Message& msg)
@@ -80,14 +99,29 @@ namespace pork {
             const std::shared_ptr<Message>& msg,
             const std::vector<Dependency>& deps)
     {
-        auto intern_msg = std::make_shared<InternalMessage>(msg);
-        {  // add to new_msg
+        std::shared_ptr<InternalMessage> intern_msg;
+        bool ack_after_pushing = false;
+        {
             PORK_LOCK(all_msgs_mtx);
-            all_msgs[msg->id] = intern_msg;
+            auto iter = all_msgs.find(msg->id);
+            if (iter == all_msgs.end()) {  // not exists yet
+                intern_msg = std::make_shared<InternalMessage>(msg);
+                all_msgs[msg->id] = intern_msg;
+            } else {  // exists already
+                if (iter->second->state == MessageState::ACKED) {
+                    ack_after_pushing = true;
+                }
+                intern_msg = iter->second;
+                intern_msg->msg = msg;
+            }
         }
 
         if (deps.empty()) {  // free message
-            push_free_message(intern_msg);
+            if (is_serving) {
+                push_free_message(intern_msg);
+            } else if (ack_after_pushing) {
+                ack(msg->id);
+            }
             return;
         }
 
@@ -109,13 +143,18 @@ namespace pork {
                 }
             }
 
-            if (intern_msg->n_deps == 0) {  // check if there are really some deps
+            // check if there are really some deps
+            if (is_serving && intern_msg->n_deps == 0) {
                 push_free_message(intern_msg);
             }
         }
+
+        if (ack_after_pushing) {
+            ack(msg->id);
+        }
     }
 
-    void MessageQueue::ack(id_t msg_id, bool update_free_msgs)
+    void MessageQueue::ack(id_t msg_id)
     {
         PORK_RLOCK(rlock_, all_msgs_mtx);
         auto msg = all_msgs.at(msg_id);
@@ -147,7 +186,7 @@ namespace pork {
 
                 if (has_free_msg) {
                     PORK_RLOCK_UPGRADE(rlock_all_deps_mtx);
-                    if (update_free_msgs) {
+                    if (is_serving) {
                         PORK_LOCK(free_msgs_mtx);
                     }
                     auto i = dep->dependants.begin();
@@ -155,7 +194,7 @@ namespace pork {
                         if ((*i)->n_deps == 0) {
                             // push_free_message is not used here to avoid
                             // repeatedly locking-unlocking free_msgs_mtx
-                            if (update_free_msgs) {
+                            if (is_serving) {
                                 free_msgs.push_back(*i);
                             }
                             i = dep->dependants.erase(i);
@@ -164,7 +203,7 @@ namespace pork {
                         }
                     }
 
-                    if (update_free_msgs) {
+                    if (is_serving) {
                         // we are not sure if there was only one free msg being added,
                         // just notify all
                         free_msgs_not_empty_cv.notify_all();
@@ -172,11 +211,6 @@ namespace pork {
                 }
             }
         }
-    }
-
-    void MessageQueue::ack(id_t msg_id)
-    {
-        ack(msg_id, true);
     }
 
     void MessageQueue::fail(id_t msg_id)

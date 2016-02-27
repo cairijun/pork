@@ -63,6 +63,10 @@ namespace pork {
                 throw "Not implemented yet!";
             }
 
+            void start_serving() override {
+                throw "Not implemented yet!";
+            }
+
             std::deque<Message> free_msgs;
             std::deque<std::tuple<const std::shared_ptr<Message>,
                                   const std::vector<Dependency>>> pushed_msgs;

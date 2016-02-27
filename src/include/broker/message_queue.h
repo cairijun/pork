@@ -19,7 +19,7 @@
 namespace pork {
 
     struct InternalMessage {
-        const std::shared_ptr<Message> msg;
+        std::shared_ptr<Message> msg;
         std::atomic<MessageState::type> state;
         std::atomic_int n_deps;
         InternalMessage(
@@ -46,13 +46,14 @@ namespace pork {
 
             // for synchronization
             virtual void set_msg_state(id_t msg_id, MessageState::type state) = 0;
+            virtual void start_serving() = 0;
     };
 
     class MessageQueue: public AbstractMessageQueue {
         friend class BrokerMqTest;
 
         public:
-            MessageQueue() {}
+            MessageQueue(): is_serving(true) {}
             MessageQueue(const MessageQueue&) = delete;
             bool pop_free_message(Message& msg) override;
             void push_message(
@@ -64,10 +65,10 @@ namespace pork {
             // for synchronization
             explicit MessageQueue(const QueueSdto& sdto);
             void set_msg_state(id_t msg_id, MessageState::type state) override;
+            void start_serving() override;
 
         private:
             void push_free_message(const std::shared_ptr<InternalMessage>& msg);
-            void ack(id_t msg_id, bool update_free_msgs);
 
             std::deque<std::shared_ptr<InternalMessage>> free_msgs;
             // change all shared_ptrs other than the following one to weak_ptrs?
@@ -79,6 +80,8 @@ namespace pork {
 
             boost::upgrade_mutex all_msgs_mtx;
             boost::upgrade_mutex all_deps_mtx;
+
+            std::atomic_bool is_serving;
 
             static boost::chrono::milliseconds POP_FREE_TIMEOUT;
     };
