@@ -85,11 +85,17 @@ namespace pork {
     {
         PORK_RLOCK(rlock_, queues_mtx);
         auto q_iter = queues.find(queue_name);
+        rlock_queues_mtx.unlock();
+
         if (q_iter == queues.end()) {
-            PORK_RLOCK_UPGRADE(rlock_queues_mtx);
-            queues[queue_name] = create_mq();
+            PORK_LOCK(queues_mtx);
+            q_iter = queues.find(queue_name);
+            if (q_iter == queues.end()) {
+                queues[queue_name] = create_mq();
+            }
             q_iter = queues.find(queue_name);
         }
+
         return q_iter->second;
     }
 
