@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <random>
 #include <thread>
@@ -82,6 +83,25 @@ namespace pork {
             }
 
             std::unique_ptr<MessageQueue> mq;
+    };
+
+    struct SyncOperation {
+        virtual void apply(const std::unique_ptr<MessageQueue>& mq) = 0;
+    };
+
+    struct SetState: SyncOperation {
+        id_t id;
+        MessageState::type state;
+        SetState(id_t id, MessageState::type state): id(id), state(state) {}
+
+        void apply(const std::unique_ptr<MessageQueue>& mq) override {
+            mq->set_msg_state(id, state);
+        }
+    };
+
+    struct AddMessage: SyncOperation {
+        void apply(const std::unique_ptr<MessageQueue>& mq) override {
+        }
     };
 
     TEST_F(BrokerMqTest, PopTimeout) {
@@ -221,7 +241,7 @@ namespace pork {
 
     TEST_F(BrokerMqTest, FakeWorkLoad) {
         int n_msgs = 0;
-        int n_groups = 100;
+        int n_groups = 500;
         int group_size = 10;
         std::vector<std::shared_ptr<Message>> msgs;
         for (int i = 0; i < n_groups; ++i) {
@@ -233,9 +253,9 @@ namespace pork {
         std::mt19937 rng((std::random_device())());
         std::exponential_distribution<double> exp_dist(0.2);
         std::random_shuffle(msgs.begin(), msgs.end(), [&rng, &exp_dist] (int n) {
-            int x = exp_dist(rng);
-            if (x >= n) {
-                x = n - 1;
+            int x = n - exp_dist(rng);
+            if (x < 0) {
+                x = 0;
             }
             return x;
         });
@@ -337,6 +357,104 @@ namespace pork {
                         expected.second.dependant_ids));
         }
 
+        mq->start_serving();
+
+        EXPECT_TRUE(is_serving());
         EXPECT_THAT(get_free_msgs(), ElementsAre(all_msgs[5]));
+    }
+
+    TEST_F(BrokerMqTest, Sync) {
+        mq.reset(new MessageQueue(QueueSdto()));
+
+        std::vector<std::shared_ptr<Message>> msgs;
+        std::vector<std::function<void()>> operations;
+
+        for (int i = 0; i < 5000; ++i) {
+            auto msg = make_msg(i, std::to_string(i / 4));
+            msgs.push_back(msg);
+            if (i < 4) {
+                operations.push_back([i, msg, this] () {
+                    mq->push_message(msg, {});
+                });
+            } else {
+                operations.push_back([i, msg, this] () {
+                    mq->push_message(msg, {make_dep(std::to_string(i / 4 - 1), 4)});
+                });
+            }
+            if (i % 20 == 0) {
+                operations.push_back([i, this] () {
+                    mq->set_msg_state(i, MessageState::FAILED);
+                });
+            }
+            operations.push_back([i, this] () {
+                mq->set_msg_state(i, MessageState::IN_PROGRESS);
+            });
+            operations.push_back([i, this] () {
+                mq->set_msg_state(i, MessageState::ACKED);
+            });
+        }
+
+        auto waiting_msg = make_msg(10000);
+        operations.push_back([waiting_msg, this] () {
+            mq->push_message(waiting_msg, {make_dep("unresolved", 2)});
+        });
+        msgs.push_back(waiting_msg);
+
+        auto free_msg = make_msg(20000);
+        operations.push_back([free_msg, this] () {
+            mq->push_message(free_msg, {});
+        });
+        msgs.push_back(free_msg);
+
+        std::mt19937 rng((std::random_device())());
+        std::shuffle(operations.begin(), operations.end(), rng);
+
+        std::vector<std::thread> ts;
+        std::atomic_size_t idx(0);
+        for (int i = 0; i < 5; ++i) {
+            ts.emplace_back([&] () {
+                size_t idx_local = idx++;
+                while (idx_local < operations.size()) {
+                    operations[idx_local]();
+                    idx_local = idx++;
+                }
+            });
+        }
+        for (auto& t : ts) {
+            t.join();
+        }
+
+        mq->start_serving();
+
+        auto& all_msgs = get_all_msgs();
+        EXPECT_THAT(all_msgs, SizeIs(all_msgs.size()));
+        for (auto& m : msgs) {
+            auto& actual = all_msgs[m->id];
+            EXPECT_EQ(m, actual->msg);
+            if (m != waiting_msg) {
+                EXPECT_EQ(0, actual->n_deps);
+            }
+            if (m != waiting_msg && m != free_msg) {
+                EXPECT_EQ(MessageState::ACKED, actual->state);
+            }
+        }
+
+        auto& all_deps = get_all_deps();
+        EXPECT_THAT(all_deps, SizeIs(all_msgs.size() / 4 + 1));
+        for (int i = 0; i < all_msgs.size() / 4; ++i) {
+            auto& dep = all_deps[std::to_string(i)];
+            EXPECT_EQ(4, dep->n_resolved);
+            EXPECT_THAT(dep->dependants, IsEmpty());
+        }
+        EXPECT_EQ(0, all_deps["unresolved"]->n_resolved);
+        EXPECT_THAT(all_deps["unresolved"]->dependants,
+                ElementsAre(all_msgs[waiting_msg->id]));
+
+        EXPECT_EQ(2, all_msgs[waiting_msg->id]->n_deps);
+        EXPECT_EQ(MessageState::QUEUING, all_msgs[waiting_msg->id]->state);
+
+        EXPECT_EQ(MessageState::QUEUING, all_msgs[free_msg->id]->state);
+
+        EXPECT_THAT(get_free_msgs(), ElementsAre(all_msgs[free_msg->id]));
     }
 }

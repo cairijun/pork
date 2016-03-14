@@ -21,9 +21,6 @@ namespace pork {
             all_msgs[m.first] = std::make_shared<InternalMessage>(
                     std::make_shared<Message>(m.second.msg),
                     m.second.n_deps, m.second.state);
-            if (m.second.n_deps == 0 && m.second.state == MessageState::QUEUING) {
-                free_msgs.push_back(all_msgs[m.first]);
-            }
         }
 
         for (auto& d : sdto.all_deps) {
@@ -54,7 +51,7 @@ namespace pork {
             while (orig < state && !msg->state.compare_exchange_weak(orig, state));
 
             if (orig < state) {  // did being updated
-                if (state == MessageState::ACKED) {
+                if (state == MessageState::ACKED && msg->msg) {
                     ack(msg_id);
                 }
             }
@@ -160,7 +157,8 @@ namespace pork {
         auto msg = all_msgs.at(msg_id);
         rlock_all_msgs_mtx.unlock();
 
-        if (msg->state != MessageState::IN_PROGRESS) {
+        // we don't check state in sync mode as set_msg_state takes care of it
+        if (is_serving && msg->state != MessageState::IN_PROGRESS) {
             return;
         }
 
