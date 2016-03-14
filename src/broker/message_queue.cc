@@ -186,8 +186,10 @@ namespace pork {
 
                 if (has_free_msg) {
                     PORK_ULOCK_UPGRADE(ulock_all_deps_mtx);
+                    auto lock_free_msgs_mtx = boost::make_unique_lock(
+                            free_msgs_mtx, boost::defer_lock);
                     if (is_serving) {
-                        PORK_LOCK(free_msgs_mtx);
+                        lock_free_msgs_mtx.lock();
                     }
 
                     auto i = dep->dependants.begin();
