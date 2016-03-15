@@ -164,16 +164,15 @@ namespace pork {
 
         msg->state = MessageState::ACKED;
         if (msg->msg->__isset.resolve_dep) {
-            PORK_ULOCK(ulock_, all_deps_mtx);
+            PORK_LOCK(all_deps_mtx);
             auto dep_iter = all_deps.find(msg->msg->resolve_dep);
             if (dep_iter == all_deps.end()) {
-                PORK_ULOCK_UPGRADE(ulock_all_deps_mtx);
                 all_deps[msg->msg->resolve_dep].reset(new InternalDependency(1));
             } else {
                 auto& dep = dep_iter->second;
                 ++dep->n_resolved;
 
-                // using two loops to avoid unnecessary lock upgrade
+                // using two loops to avoid unnecessary locking
                 // or temporary list creation when there's no new free msg
                 bool has_free_msg = false;
                 for (auto dependant : dep->dependants) {
@@ -183,7 +182,6 @@ namespace pork {
                 }
 
                 if (has_free_msg) {
-                    PORK_ULOCK_UPGRADE(ulock_all_deps_mtx);
                     auto lock_free_msgs_mtx = boost::make_unique_lock(
                             free_msgs_mtx, boost::defer_lock);
                     if (is_serving) {

@@ -78,7 +78,9 @@ namespace pork {
             boost::mutex free_msgs_mtx;
             boost::condition_variable free_msgs_not_empty_cv;
 
+            // all_msgs_mtx protects all_msgs but NOT individual message states
             boost::upgrade_mutex all_msgs_mtx;
+            // all_deps_mtx, however, protect BOTH all_deps and every dep states
             boost::upgrade_mutex all_deps_mtx;
 
             std::atomic_bool is_serving;
