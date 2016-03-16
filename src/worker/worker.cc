@@ -78,7 +78,7 @@ namespace pork {
     {
         char buf[256];
         int buf_size = sizeof(buf);
-        zoo_get(zk_handle, ZNODE_BROKER_ADDR,
+        zoo_get(zk_handle, ZNODE_BROKER_LEADER,
                 0, buf, &buf_size, nullptr);  // TODO: errcode check
         host.assign(buf, buf_size);
         size_t semicolon_pos = host.rfind(':');

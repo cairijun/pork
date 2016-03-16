@@ -41,16 +41,8 @@ int main() {
         }
     }
 
-    ret = zoo_create(zk_handle.get(), ZNODE_BROKER_ADDR, broker_addr, strlen(broker_addr),
-            &ZOO_READ_ACL_UNSAFE, ZOO_EPHEMERAL, nullptr, 0);
-    if (ret == ZNODEEXISTS) {
-        // TODO: slave broker
-    } else if (ret != ZOK) {
-        // TODO: err handling
-    }
-
     // thrift uses boost's smart ptrs
-    auto handler = boost::make_shared<BrokerInternalHandler>(zk_handle.get());
+    auto handler = boost::make_shared<BrokerInternalHandler>(zk_handle, broker_addr);
     TThreadedServer server(
             boost::make_shared<BrokerInternalProcessor>(handler),
             boost::make_shared<TServerSocket>(6783),

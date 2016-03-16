@@ -9,8 +9,17 @@
 using namespace boost::log::trivial;
 
 namespace pork {
-    static const char* ZNODE_PATHS_TO_CREATE[] = {"/pork", "/pork/broker", "/pork/id"};
-    static const char* ZNODE_BROKER_ADDR = "/pork/broker/addr";
+    static const char* ZNODE_PATHS_TO_CREATE[] = {
+        "/pork",
+        "/pork/broker",
+        "/pork/broker/nodes",
+        "/pork/broker/sync_opcount",
+        "/pork/id",
+    };
+    static const char* ZNODE_BROKER_LEADER = "/pork/broker/leader";
+    static const char* ZNODE_BROKER_NODES = "/pork/broker/nodes";
+    static const char* ZNODE_BROKER_NODES_PREFIX = "/pork/broker/nodes/";
+    static const char* ZNODE_BROKER_SYNC_OPCOUNT = "/pork/broker/sync_opcount";
     static const char* ZNODE_ID_BLOCK_PREFIX = "/pork/id/block";
 }
 

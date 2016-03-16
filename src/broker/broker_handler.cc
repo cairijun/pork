@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/lock_factories.hpp>
@@ -13,21 +12,6 @@
 #include "proto_types.h"
 
 namespace pork {
-
-    BrokerHandler::BrokerHandler(zhandle_t* zk_handle):
-        zk_handle(zk_handle)
-    {
-        char zk_node_path_buf[256];
-        int ret = zoo_create(zk_handle, ZNODE_ID_BLOCK_PREFIX, NULL, -1,
-                &ZOO_READ_ACL_UNSAFE, ZOO_EPHEMERAL | ZOO_SEQUENCE,
-                zk_node_path_buf, 256);
-        if (ret != ZOK) {
-            throw std::runtime_error(zerror(ret));
-        }
-        id_t block_id = boost::lexical_cast<id_t>(
-                zk_node_path_buf + strlen(ZNODE_ID_BLOCK_PREFIX));
-        next_id = 1 + (block_id << (sizeof(block_id) * 4));  // block id as the upper half
-    }
 
     void BrokerHandler::getMessage(
             Message& _return,

@@ -18,7 +18,7 @@ namespace pork {
 
     class BrokerHandler: virtual public BrokerIf {
         public:
-            BrokerHandler(zhandle_t* zk_handle);
+            BrokerHandler(id_t next_id = 0): next_id(next_id) {}
             BrokerHandler(const BrokerHandler&) = delete;
             void getMessage(
                     Message& _return,
@@ -37,8 +37,6 @@ namespace pork {
             void fail(const std::string& queue_name, const id_t msg_id) override;
 
         protected:
-            // for testing
-            BrokerHandler():next_id(0) {}
             virtual std::shared_ptr<AbstractMessageQueue> create_mq();
 
             std::unordered_map<std::string, std::shared_ptr<AbstractMessageQueue>> queues;
