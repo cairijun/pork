@@ -85,25 +85,6 @@ namespace pork {
             std::unique_ptr<MessageQueue> mq;
     };
 
-    struct SyncOperation {
-        virtual void apply(const std::unique_ptr<MessageQueue>& mq) = 0;
-    };
-
-    struct SetState: SyncOperation {
-        id_t id;
-        MessageState::type state;
-        SetState(id_t id, MessageState::type state): id(id), state(state) {}
-
-        void apply(const std::unique_ptr<MessageQueue>& mq) override {
-            mq->set_msg_state(id, state);
-        }
-    };
-
-    struct AddMessage: SyncOperation {
-        void apply(const std::unique_ptr<MessageQueue>& mq) override {
-        }
-    };
-
     TEST_F(BrokerMqTest, PopTimeout) {
         std::vector<std::thread> ts;
         for (int i = 0; i < 20; ++i) {
