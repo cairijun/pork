@@ -28,7 +28,7 @@ endif()
 # Boost
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost 1.53.0 REQUIRED
-    COMPONENTS chrono system thread log)
+    COMPONENTS chrono system thread log program_options)
 
 set(${CMAKE_PROJECT_NAME}_INCLUDE_DIR src/include)
 
